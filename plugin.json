@@ -1,0 +1,84 @@
+{
+  "apiVersion": 1,
+  "id": "modera.interaction",
+  "name": "User Interaction",
+  "version": "0.1.0",
+  "description": "需要澄清或手动操作时，在对话中收集用户的选择与回答。",
+  "author": "Modera",
+  "category": "interaction",
+  "icon": "message",
+  "main": "dist/index.cjs",
+  "permissions": [],
+  "extensions": [
+    "tool.result"
+  ],
+  "agentGuidance": "Ask one focused user question only when execution genuinely needs their choice or manual action. Do not poll the interaction tool or treat cancellation as consent.",
+  "tools": [
+    {
+      "id": "ask_user_question",
+      "description": "Ask the user a focused question or wait for a manual action. Call once, alone: the tool waits for a real user response in its card, no polling. Provide question/options in the user's language. options is optional (free text otherwise); multiple=true permits multiple selections. Users can always add text or cancel. Cancellation is not consent. Do not use this tool to bypass operation approval. Maximum wait 30 minutes.",
+      "locales": {
+        "en": {
+          "title": "Ask the user"
+        },
+        "zh-CN": {
+          "description": "在对话中询问用户，支持单选、多选、文字和取消；一次调用等待真实回答，不轮询。"
+        }
+      },
+      "executionKind": "interaction",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "multiple": {
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 8,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "question": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
+      },
+      "presentation": {
+        "icon": "message",
+        "kind": "question",
+        "metrics": [
+          {
+            "format": "count",
+            "label": "项回答",
+            "labelEn": "answers",
+            "path": "answers"
+          }
+        ],
+        "targets": [
+          "question"
+        ],
+        "tone": "violet"
+      },
+      "requiredPermissions": [],
+      "title": "询问用户"
+    }
+  ],
+  "locales": {
+    "en": {
+      "description": "Collect choices and answers when clarification or manual action is needed."
+    },
+    "zh-CN": {
+      "name": "用户交互"
+    }
+  }
+}

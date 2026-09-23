@@ -1,0 +1,23 @@
+{
+  "name": "@modera-plugin/interaction",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Collect user choices and answers inside a conversation.",
+  "files": [
+    "plugin.json",
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "modera-plugin-build ."
+  },
+  "devDependencies": {
+    "@modera/plugin-build": "0.1.0",
+    "@modera/plugin-sdk": "0.1.0"
+  },
+  "dependencies": {},
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
