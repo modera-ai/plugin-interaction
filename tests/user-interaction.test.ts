@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import { readFile } from "node:fs/promises";
 import { activate } from "../src";
 import { readPluginManifest } from "@modera/plugin-host/testing";
 
@@ -37,6 +38,7 @@ it("waits for a real answer, rejects forged/cross-session answers and returns se
   runtime.add({
     manifest: parsePluginManifest(manifest),
     load: async () => ({ activate }),
+    readFrontend: async () => ({ body: new Uint8Array(await readFile(new URL("../dist/ui/question-result.js", import.meta.url))), mime: "text/javascript" }),
   });
   await runtime.reconcile(new Set([manifest.id]));
   const executor = new ToolExecutor(registry, approve, new Set());
@@ -65,7 +67,8 @@ it("waits for a real answer, rejects forged/cross-session answers and returns se
     expect(approve).not.toHaveBeenCalled();
     expect(await runtime.ui.request(request, context)).toMatchObject({
       live: true,
-      children: [{}, { type: "choice-form", multiple: true }, {}],
+      data: { question: { question: "选择功能", options: ["搜索", "编辑"], multiple: true } },
+      children: [],
     });
     await expect(
       runtime.ui.request(
@@ -152,6 +155,7 @@ it("run cancellation and project disable settle pending questions without approv
   runtime.add({
     manifest,
     load: async () => ({ activate }),
+    readFrontend: async () => ({ body: new Uint8Array(await readFile(new URL("../dist/ui/question-result.js", import.meta.url))), mime: "text/javascript" }),
   });
   await runtime.reconcile(new Set([manifest.id]));
   const executor = new ToolExecutor(
