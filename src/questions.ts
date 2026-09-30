@@ -78,11 +78,22 @@ export class Questions {
       throw new Error("Question already exists or capacity reached");
     let noticeId: string | undefined;
     let settled = false;
+    const disposers: (() => void)[] = [];
     return new Promise((resolve) => {
       const finish = (answer: Answer) => {
         if (!this.pending.delete(key)) return;
         settled = true;
-        if (noticeId) void this.host.notifications?.update(noticeId, { pending: false }, { projectId: context.projectId }).catch(error => console.warn("Question notification update failed", error));
+        for (const dispose of disposers.splice(0)) dispose();
+        if (noticeId)
+          void this.host.notifications
+            ?.update(
+              noticeId,
+              { pending: false },
+              { projectId: context.projectId },
+            )
+            .catch((error) =>
+              console.warn("Question notification update failed", error),
+            );
         signal.removeEventListener("abort", cancelled);
         if (this.finished.size >= 32)
           this.finished.delete(this.finished.keys().next().value!);
@@ -95,10 +106,95 @@ export class Questions {
       signal.addEventListener("abort", cancelled, { once: true });
       this.host.invalidateUi?.(context.sessionId);
       if (signal.aborted) cancelled();
-      if (!settled) void this.host.notifications?.publish({ key: `question:${context.toolCallId}`, title: "等待你的回答", body: question.question,
-        level: "info", pending: true, target: { type: "conversation", sessionId: context.sessionId } }, context)
-        .then(item => { noticeId = item.id; if (settled) return this.host.notifications?.update(item.id, { pending: false }, { projectId: context.projectId }); })
-        .catch(error => console.warn("Question notification failed", error));
+      const answerAction = `answer:${context.sessionId}:${context.toolCallId}`;
+      const cancelAction = `cancel:${context.sessionId}:${context.toolCallId}`;
+      let interactive = false;
+      if (!settled && this.host.notifications) {
+        try {
+          disposers.push(
+            this.host.notifications.onAction(
+              answerAction,
+              (values) => {
+                this.respond(
+                  context.toolCallId!,
+                  JSON.stringify({
+                    selected: values.selected.map((id) => Number(id)),
+                    text: values.text,
+                  }),
+                  context,
+                );
+              },
+              context,
+            ),
+          );
+          disposers.push(
+            this.host.notifications.onAction(
+              cancelAction,
+              () => {
+                this.respond(context.toolCallId!, undefined, context, true);
+              },
+              context,
+            ),
+          );
+          interactive = true;
+        } catch (error) {
+          for (const dispose of disposers.splice(0)) dispose();
+          console.warn("Question notification actions unavailable", error);
+        }
+      }
+      if (!settled)
+        void this.host.notifications
+          ?.publish(
+            {
+              key: `question:${context.toolCallId}`,
+              title: "等待你的回答",
+              body: question.question,
+              level: "info",
+              pending: true,
+              target: { type: "conversation", sessionId: context.sessionId },
+              ...(interactive
+                ? {
+                    interaction: {
+                      options: question.options.map((label, index) => ({
+                        id: String(index),
+                        label,
+                      })),
+                      multiple: question.multiple,
+                      input: {
+                        label: "补充回答",
+                        placeholder: "也可以直接输入你的回答",
+                        maxLength: 1000,
+                      },
+                      actions: [
+                        {
+                          id: answerAction,
+                          label: "提交回答",
+                          variant: "primary" as const,
+                        },
+                        {
+                          id: cancelAction,
+                          label: "取消问题",
+                          variant: "secondary" as const,
+                        },
+                      ],
+                    },
+                  }
+                : {}),
+            },
+            context,
+          )
+          .then((item) => {
+            noticeId = item.id;
+            if (settled)
+              return this.host.notifications?.update(
+                item.id,
+                { pending: false },
+                { projectId: context.projectId },
+              );
+          })
+          .catch((error) =>
+            console.warn("Question notification failed", error),
+          );
     });
   }
   respond(
