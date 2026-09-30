@@ -9,7 +9,7 @@
   "icon": "message",
   "main": "dist/index.cjs",
   "hostRenderers": { "question-result": { "entry": "question-result.js", "root": "dist/ui" } },
-  "permissions": [],
+  "permissions": ["notifications.show"],
   "extensions": [
     "tool.result"
   ],

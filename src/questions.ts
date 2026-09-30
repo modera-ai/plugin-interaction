@@ -76,9 +76,13 @@ export class Questions {
       this.finished.has(key)
     )
       throw new Error("Question already exists or capacity reached");
+    let noticeId: string | undefined;
+    let settled = false;
     return new Promise((resolve) => {
       const finish = (answer: Answer) => {
         if (!this.pending.delete(key)) return;
+        settled = true;
+        if (noticeId) void this.host.notifications?.update(noticeId, { pending: false }, { projectId: context.projectId }).catch(error => console.warn("Question notification update failed", error));
         signal.removeEventListener("abort", cancelled);
         if (this.finished.size >= 32)
           this.finished.delete(this.finished.keys().next().value!);
@@ -91,6 +95,10 @@ export class Questions {
       signal.addEventListener("abort", cancelled, { once: true });
       this.host.invalidateUi?.(context.sessionId);
       if (signal.aborted) cancelled();
+      if (!settled) void this.host.notifications?.publish({ key: `question:${context.toolCallId}`, title: "等待你的回答", body: question.question,
+        level: "info", pending: true, target: { type: "conversation", sessionId: context.sessionId } }, context)
+        .then(item => { noticeId = item.id; if (settled) return this.host.notifications?.update(item.id, { pending: false }, { projectId: context.projectId }); })
+        .catch(error => console.warn("Question notification failed", error));
     });
   }
   respond(
