@@ -8,7 +8,8 @@
   "category": "interaction",
   "icon": "message",
   "main": "dist/index.cjs",
-  "permissions": [],
+  "hostRenderers": { "question-result": { "entry": "question-result.js", "root": "dist/ui" } },
+  "permissions": ["notifications.show"],
   "extensions": [
     "tool.result"
   ],
