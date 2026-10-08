@@ -9,13 +9,27 @@
   "category": "interaction",
   "icon": "message",
   "main": "dist/index.cjs",
-  "hostRenderers": { "question-result": { "entry": "question-result.js", "root": "dist/ui" } },
+  "hostRenderers": { "question-result": { "entry": "question-result.js", "root": "dist/ui" }, "plan-approval": { "entry": "plan-approval.js", "root": "dist/ui" } },
   "permissions": ["notifications.show"],
   "extensions": [
     "tool.result"
   ],
   "agentGuidance": "Ask one focused user question only when execution genuinely needs their choice or manual action. Do not poll the interaction tool or treat cancellation as consent.",
   "tools": [
+    {
+      "id": "approve_plan",
+      "title": "计划审批",
+      "description": "Submit a complete Markdown plan for explicit user approval before implementation. Call once after research and clarification. The tool waits for the user's decision. Only an explicit approval permits implementation; keep planning means revise the plan without changing files.",
+      "executionKind": "interaction",
+      "requiredPermissions": [],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "plan": { "type": "string", "minLength": 1, "maxLength": 100000 } },
+        "required": ["plan"]
+      },
+      "presentation": { "icon": "message", "kind": "question", "tone": "violet", "targets": ["plan"] }
+    },
     {
       "id": "ask_user_question",
       "description": "Ask the user a focused question or wait for a manual action. Call once, alone: the tool waits for a real user response in its card, no polling. Provide question/options in the user's language. options is optional (free text otherwise); multiple=true permits multiple selections. Users can always add text or cancel. Cancellation is not consent. Do not use this tool to bypass operation approval. Maximum wait 30 minutes.",

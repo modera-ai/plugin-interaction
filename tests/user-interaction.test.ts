@@ -27,6 +27,42 @@ const host = {
   signal: new AbortController().signal,
   grantedPermissions: new Set<never>(),
 };
+it("waits for explicit plan approval inside the tool call", async () => {
+  const registry = new ToolRegistry();
+  const runtime = new PluginRuntime(registry, () => true, async () => "unused");
+  runtime.add({
+    manifest: parsePluginManifest(manifest),
+    load: async () => ({ activate }),
+    readFrontend: async () => ({ body: new Uint8Array(await readFile(new URL("../dist/ui/plan-approval.js", import.meta.url))), mime: "text/javascript" }),
+  });
+  await runtime.reconcile(new Set([manifest.id]));
+  const executor = new ToolExecutor(registry, async () => true, new Set());
+  const input = { plan: "# Build a todo app\n\nUse the existing workspace." };
+  try {
+    const result = executor.execute({ id: "plan-1", name: "approve_plan", input }, context);
+    const request = { id: "modera.interaction.plan-approval", sessionId: "s", toolCallId: "plan-1", locale: "zh-CN", tool: { name: "approve_plan", input } };
+    await vi.waitFor(() => expect(executor.activeCall("s", "plan-1")).toBeTruthy());
+    expect(await runtime.ui.request(request, context)).toMatchObject({ live: true, data: { approved: null } });
+    await expect(runtime.ui.request({ ...request, action: { id: "approve" } }, { ...context, sessionId: "other" })).rejects.toThrow("pending");
+    await runtime.ui.request({ ...request, action: { id: "approve" } }, context);
+    expect(JSON.parse(await result)).toMatchObject({ approved: true });
+  } finally { await runtime.close(); }
+});
+it("returns plan revision feedback without granting approval", async () => {
+  const registry = new ToolRegistry();
+  const runtime = new PluginRuntime(registry, () => true, async () => "unused");
+  runtime.add({ manifest: parsePluginManifest(manifest), load: async () => ({ activate }), readFrontend: async () => ({ body: new Uint8Array(await readFile(new URL("../dist/ui/plan-approval.js", import.meta.url))), mime: "text/javascript" }) });
+  await runtime.reconcile(new Set([manifest.id]));
+  const executor = new ToolExecutor(registry, async () => true, new Set());
+  try {
+    const input = { plan: "# Plan" };
+    const result = executor.execute({ id: "plan-revise", name: "approve_plan", input }, context);
+    const request = { id: "modera.interaction.plan-approval", sessionId: "s", toolCallId: "plan-revise", locale: "zh-CN", tool: { name: "approve_plan", input } };
+    await vi.waitFor(() => expect(executor.activeCall("s", "plan-revise")).toBeTruthy());
+    await runtime.ui.request({ ...request, action: { id: "continue", value: "Use React instead" } }, context);
+    expect(JSON.parse(await result)).toMatchObject({ approved: false, feedback: "Use React instead" });
+  } finally { await runtime.close(); }
+});
 it("waits for a real answer, rejects forged/cross-session answers and returns selections plus text once", async () => {
   const registry = new ToolRegistry(),
     approve = vi.fn(async () => true);
