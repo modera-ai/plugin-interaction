@@ -9,12 +9,23 @@
   "category": "interaction",
   "icon": "message",
   "main": "dist/index.cjs",
-  "hostRenderers": { "question-result": { "entry": "question-result.js", "root": "dist/ui" }, "plan-approval": { "entry": "plan-approval.js", "root": "dist/ui" } },
-  "permissions": ["notifications.show"],
+  "hostRenderers": {
+    "question-result": {
+      "entry": "question-result.js",
+      "root": "dist/ui"
+    },
+    "plan-approval": {
+      "entry": "plan-approval.js",
+      "root": "dist/ui"
+    }
+  },
+  "permissions": [
+    "notifications.show"
+  ],
   "extensions": [
     "tool.result"
   ],
-  "agentGuidance": "Ask one focused user question only when execution genuinely needs their choice or manual action. Do not poll the interaction tool or treat cancellation as consent.",
+  "agentGuidance": "Group related clarifications into one ask_user_question call using questions. Support single choice, multiple choice, free text and optional skips. Wait for the real user response; do not poll or treat skipping or cancellation as consent.",
   "tools": [
     {
       "id": "approve_plan",
@@ -25,49 +36,149 @@
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
-        "properties": { "plan": { "type": "string", "minLength": 1, "maxLength": 100000 } },
-        "required": ["plan"]
+        "properties": {
+          "plan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          }
+        },
+        "required": [
+          "plan"
+        ]
       },
-      "presentation": { "icon": "message", "kind": "question", "tone": "violet", "targets": ["plan"] }
+      "presentation": {
+        "icon": "message",
+        "kind": "question",
+        "tone": "violet",
+        "targets": [
+          "plan"
+        ]
+      }
     },
     {
       "id": "ask_user_question",
-      "description": "Ask the user a focused question or wait for a manual action. Call once, alone: the tool waits for a real user response in its card, no polling. Provide question/options in the user's language. options is optional (free text otherwise); multiple=true permits multiple selections. Users can always add text or cancel. Cancellation is not consent. Do not use this tool to bypass operation approval. Maximum wait 30 minutes.",
+      "description": "Ask one question or up to 12 related questions in one call. Always provide questions: [{id,title,options:[{id,title,description}],multiSelect,allowOther,skippable,freeText,freeTextPlaceholder,freeTextMultiline,otherPlaceholder,nextLabel,layout,chipPosition}]. Omitted options means free text. allowOther and skippable default true. layout: inline/stacked; chipPosition: left/right. The user navigates questions and submits all answers together. Returns responses with questionId, selectedIds, selectedOptions, otherText and skipped. A single question also uses a one-element questions array. Wait for the real response without polling. Skipping/cancellation is not consent or operation approval. Maximum wait 30 minutes.",
       "locales": {
         "en": {
           "title": "Ask the user"
         },
         "zh-CN": {
-          "description": "在对话中询问用户，支持单选、多选、文字和取消；一次调用等待真实回答，不轮询。"
+          "description": "一次询问一个或多个相关问题，支持单选、多选、选项说明、自由文字、补充回答及逐题跳过；统一提交真实用户回答，不轮询。"
         }
       },
       "executionKind": "interaction",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
-          "multiple": {
-            "type": "boolean"
-          },
-          "options": {
-            "items": {
-              "maxLength": 200,
-              "minLength": 1,
-              "type": "string"
-            },
-            "maxItems": 8,
+          "questions": {
             "type": "array",
-            "uniqueItems": true
-          },
-          "question": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "type": "string"
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "options": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "title"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1000
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "multiSelect": {
+                  "type": "boolean"
+                },
+                "allowOther": {
+                  "type": "boolean"
+                },
+                "skippable": {
+                  "type": "boolean"
+                },
+                "freeText": {
+                  "type": "boolean"
+                },
+                "freeTextMultiline": {
+                  "type": "boolean"
+                },
+                "otherPlaceholder": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "freeTextPlaceholder": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "nextLabel": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "layout": {
+                  "enum": [
+                    "inline",
+                    "stacked"
+                  ]
+                },
+                "chipPosition": {
+                  "enum": [
+                    "left",
+                    "right"
+                  ]
+                }
+              }
+            }
           }
         },
+        "type": "object",
         "required": [
-          "question"
-        ],
-        "type": "object"
+          "questions"
+        ]
       },
       "presentation": {
         "icon": "message",

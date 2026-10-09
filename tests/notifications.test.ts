@@ -47,13 +47,17 @@ function fixture() {
 test("a real answer ends its pending notice without going through notification approval", async () => {
   const { questions, publish, update, context } = fixture();
   const answer = questions.ask(
-    { question: "Choose", options: ["One"] },
+    { questions: [{ title: "Choose", options: ["One"] }] },
     context,
   );
   await Promise.resolve();
   questions.respond(
     "call",
-    JSON.stringify({ selected: [0], text: "" }),
+    JSON.stringify({
+      answers: {
+        "q-0": { questionId: "q-0", selectedIds: ["o-0"], otherText: "" },
+      },
+    }),
     context,
   );
   await expect(answer).resolves.toMatchObject({
@@ -73,42 +77,23 @@ test("a real answer ends its pending notice without going through notification a
     { projectId: "project" },
   );
 });
-test("banner actions answer through the same question handler and are disposed after completion", async () => {
+test("notifications only link to the conversation; answers and cancellation use the chat UI", async () => {
   const { questions, context, handlers, publish } = fixture();
   const result = questions.ask(
-    { question: "Choose", options: ["One", "Two"], multiple: true },
+    {
+      questions: [
+        { title: "Choose", options: ["One", "Two"], multiSelect: true },
+      ],
+    },
     context,
   );
-  const notice = publish.mock.calls[0]?.[0] as unknown as {
-    interaction: { actions: { id: string }[] };
-  };
-  const answer = notice.interaction.actions[0]!.id;
-  await handlers.get(answer)!({ selected: ["0", "1"], text: "Extra" });
-  await expect(result).resolves.toMatchObject({
-    answered: true,
-    selectedOptions: ["One", "Two"],
-    customAnswer: "Extra",
-  });
+  expect(publish.mock.calls[0]?.[0]).not.toHaveProperty("interaction");
   expect(handlers.size).toBe(0);
-});
-test("only the explicit cancel action cancels a question", async () => {
-  const { questions, context, handlers, publish } = fixture();
-  const result = questions.ask(
-    { question: "Choose", options: ["One"] },
-    context,
-  );
-  const notice = publish.mock.calls[0]?.[0] as unknown as {
-    interaction: { actions: { id: string }[] };
-  };
-  await handlers.get(notice.interaction.actions[1]!.id)!({
-    selected: [],
-    text: "",
-  });
+  questions.respond("call", undefined, context, true);
   await expect(result).resolves.toMatchObject({
     answered: false,
     cancelled: true,
   });
-  expect(handlers.size).toBe(0);
 });
 test("cancellation during asynchronous publication still settles the eventual notice", async () => {
   const { questions, publish, update, controller, context } = fixture();
@@ -119,7 +104,7 @@ test("cancellation during asynchronous publication still settles the eventual no
         finishPublish = resolve;
       }),
   );
-  const answer = questions.ask({ question: "Choose" }, context);
+  const answer = questions.ask({ questions: [{ title: "Choose" }] }, context);
   controller.abort();
   await expect(answer).resolves.toMatchObject({
     cancelled: true,

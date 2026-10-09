@@ -13,12 +13,38 @@ export const activate: PluginModule["activate"] = async (host) => {
         definition: approvalDefinition,
         async prepare(input) {
           const plan = (input as { plan?: unknown })?.plan;
-          if (typeof plan !== "string" || !plan.trim() || plan.length > 100000) throw new Error("A complete plan is required");
-          return { input: { plan: plan.trim() }, preview: null, executionTimeoutMs: 1800000 };
+          if (typeof plan !== "string" || !plan.trim() || plan.length > 100000)
+            throw new Error("A complete plan is required");
+          return {
+            input: { plan: plan.trim() },
+            preview: null,
+            executionTimeoutMs: 1800000,
+          };
         },
         async execute(_input, context) {
-          const answer = await questions.ask({ question: "Approve execution of this plan?", options: ["Approve and execute", "Keep planning"] }, context);
-          return { approved: answer.answered && !answer.cancelled && answer.selectedOptions.includes("Approve and execute"), feedback: answer.customAnswer };
+          const answer = await questions.ask(
+            {
+              questions: [
+                {
+                  id: "plan",
+                  title: "Approve execution of this plan?",
+                  options: [
+                    { id: "approve", title: "Approve and execute" },
+                    { id: "continue", title: "Keep planning" },
+                  ],
+                  skippable: false,
+                },
+              ],
+            },
+            context,
+          );
+          return {
+            approved:
+              answer.answered &&
+              !answer.cancelled &&
+              answer.responses[0]?.selectedIds.includes("approve") === true,
+            feedback: answer.responses[0]?.otherText ?? "",
+          };
         },
       },
       {
