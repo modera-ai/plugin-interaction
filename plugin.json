@@ -25,7 +25,7 @@
   "extensions": [
     "tool.result"
   ],
-  "agentGuidance": "Group related clarifications into one ask_user_question call using questions. Support single choice, multiple choice, free text and optional skips. Wait for the real user response; do not poll or treat skipping or cancellation as consent.",
+  "agentGuidance": "When ask_user_question is available, use it whenever you need to ask the user for information. Collect the answer through the tool rather than ending with a plain-text question. Do not ask unnecessary questions when the request is already clear. Group related questions into one call using questions. Use free text by omitting options for open-ended questions; do not invent choices just to use the tool. Support single choice, multiple choice and optional skips. Wait for the real user response; do not poll or treat skipping or cancellation as consent. If ask_user_question is unavailable, ask in plain text. This guidance does not replace explicit plan or operation approval requirements.",
   "tools": [
     {
       "id": "approve_plan",
