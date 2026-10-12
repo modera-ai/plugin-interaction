@@ -3,7 +3,7 @@
   "activationScope": "global",
   "id": "modera.interaction",
   "name": "User Interaction",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "需要澄清或手动操作时，在对话中收集用户的选择与回答。",
   "author": "Modera",
   "category": "interaction",

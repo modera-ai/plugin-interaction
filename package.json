@@ -1,6 +1,6 @@
 {
   "name": "@modera-plugin/interaction",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Collect user choices and answers inside a conversation.",
   "files": [
