@@ -1,6 +1,7 @@
 import React from "react";
 import {
   QuestionInteraction,
+  ToolExecution,
   parseToolOutput,
   type AskUserQuestion,
   type AskUserAnswer,
@@ -12,7 +13,10 @@ export default function QuestionResult({
   call,
   result,
   state,
+  title,
   locale,
+  open,
+  onOpenChange,
   data,
   busy,
   error,
@@ -50,30 +54,45 @@ export default function QuestionResult({
         )
       : undefined;
   return (
-    <QuestionInteraction
-      key={call.id}
-      questions={questions}
-      answers={answers}
-      status={
-        answer?.cancelled
-          ? "cancelled"
-          : answers
-            ? "answered"
-            : state === "running"
-              ? "waiting"
-              : state === "failed"
-                ? "failed"
-                : "interrupted"
-      }
+    <ToolExecution
+      kind="question"
+      name={call.name}
+      title={title}
+      state={state}
       input={call.input}
       output={answer}
-      locale={locale}
-      busy={busy}
       error={error}
-      onComplete={(values) =>
-        act?.("answer", JSON.stringify({ answers: values })) ??
-        Promise.resolve(false)
-      }
-    />
+      tone="violet"
+      locale={locale}
+      open={open}
+      onOpenChange={onOpenChange}
+      awaitingInput={!answer && state === "running"}
+    >
+      <QuestionInteraction
+        key={call.id}
+        questions={questions}
+        answers={answers}
+        status={
+          answer?.cancelled
+            ? "cancelled"
+            : answers
+              ? "answered"
+              : state === "running"
+                ? "waiting"
+                : state === "failed"
+                  ? "failed"
+                  : "interrupted"
+        }
+        input={call.input}
+        output={answer}
+        locale={locale}
+        busy={busy}
+        error={error}
+        onComplete={(values) =>
+          act?.("answer", JSON.stringify({ answers: values })) ??
+          Promise.resolve(false)
+        }
+      />
+    </ToolExecution>
   );
 }
